@@ -9,6 +9,18 @@ import (
 	"path/filepath"
 )
 
+// Exists returns true if the file or directory exists, otherwise false.
+func Exists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+
+	//info, err := os.Stat(filename)
+	//return err == nil && !info.IsDir()
+}
+
 // CopyFile copies a file. If destination is a dir, the original filename will be kept.
 // See https://opensource.com/article/18/6/copying-files-go
 func CopyFile(src, dst string) (int64, error) {
