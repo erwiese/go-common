@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	_ = os.Mkdir("testdata/tmp/", 0644)
+	_ = os.Mkdir("testdata/tmp/", 0700)
 	RemoveAllContent("testdata/tmp/")
 }
 
