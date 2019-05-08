@@ -1,12 +1,14 @@
 package fileutils
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func init() {
+	_ = os.Mkdir("testdata/tmp/", 0644)
 	RemoveAllContent("testdata/tmp/")
 }
 
