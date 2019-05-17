@@ -166,3 +166,9 @@ func unzipAlternativ(src string) (string, error) {
 
 	return dstFOrDir, nil
 }
+
+// ArchiveFiles creates an archive for a list of source files.
+// The archive format is determined by the destinations' file extension, e.g. zip, tar.
+func ArchiveFiles(sources []string, dest string) error {
+	return archiver.Archive(sources, dest)
+}
