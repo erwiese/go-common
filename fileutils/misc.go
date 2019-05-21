@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Exists returns true if the file or directory exists, otherwise false.
@@ -102,4 +103,22 @@ func RemoveAllContent(dir string) error {
 	}
 
 	return nil
+}
+
+// IsSane returns true if the filepath seems to be sane for further processing.
+// Especially useful for checking form inputs.
+func IsSane(path string) bool {
+	if len(path) > 150 {
+		fmt.Printf("path is too long: %s", path)
+		return false
+	}
+
+	if strings.Contains(path, "..") {
+		fmt.Printf("illegal characters: %s", path)
+		return false
+	}
+
+	// TODO add checks
+
+	return true
 }
