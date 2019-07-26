@@ -2,7 +2,6 @@ package fileutils
 
 import (
 	"archive/zip"
-	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -15,66 +14,132 @@ import (
 	"github.com/mholt/archiver"
 )
 
-// https://github.com/mholt/archiver
+// see https://github.com/klauspost/compress/tree/master/zstd#zstd
 
-// Decompress decompresses files and choses the right filetype by its extension.
-// It returns the decompressed filename.
-func Decompress(src string) (string, error) {
+// FileCompressor can compress and decompress single files. As mholt/archiver does not support Z-compressed files,
+// we make our own FileCompressor.
+type FileCompressor struct {
+	Src string // Source file, required.
+	Dst string // Destination file
+
+	// Whether to overwrite existing files when creating files.
+	OverwriteExisting bool
+
+	// Whether the original file should be deleted after a successful de/compression.
+	DeleteSource bool
+}
+
+// IsCompressed checks if a file is compressed, by its extension.
+func IsCompressed(src string) bool {
 	ext := filepath.Ext(src)
 	if ext == "" {
-		return "", fmt.Errorf("could not determine compression type for %s", src)
+		return false
+	}
+
+	if ext == ".z" || ext == ".Z" {
+		return true
+	}
+
+	_, err := archiver.ByExtension(src)
+	if err == nil {
+		return true
+	}
+
+	return false
+}
+
+// Decompress the file and return the filename of the decompressed file. It choses the right filetype by its extension.
+func (fc *FileCompressor) Decompress() (string, error) {
+	if fc.Src == "" {
+		return "", fmt.Errorf("Source file ist not defined")
+	}
+	ext := filepath.Ext(fc.Src)
+	if ext == "" {
+		return "", fmt.Errorf("could not determine compression type for %s", fc.Src)
+	}
+
+	if fc.Dst != "" {
+		fi, err := os.Stat(fc.Dst)
+		if err == nil { // otherwise dst is probably a file and does not exist
+			if fi.IsDir() {
+				fc.Dst = filepath.Join(fc.Dst, strings.TrimSuffix(filepath.Base(fc.Src), ext))
+			}
+		}
+	} else {
+		fc.Dst = strings.TrimSuffix(fc.Src, ext)
+	}
+
+	// Destination exists?
+	if fi, err := os.Stat(fc.Dst); !os.IsNotExist(err) {
+		if !fi.IsDir() && !fc.OverwriteExisting {
+			fmt.Printf("Uncompress: destination file %s already exists. Exit\n", fc.Dst)
+			return fc.Dst, nil
+		}
 	}
 
 	switch ext {
 	case ".z", ".Z":
-		return uncompressZ(src)
+		return fc.uncompressZ()
 	default:
-		return decompressFil(src)
+		return fc.decompressFil()
 	}
 }
 
-// decompress file using archiver modul
-func decompressFil(src string) (string, error) {
-	ext := filepath.Ext(src)
-	dst := strings.TrimSuffix(src, ext)
-	err := archiver.DecompressFile(src, dst)
+// decompress file using mholt/archiver package
+func (fc *FileCompressor) decompressFil() (string, error) {
+	cIface, err := archiver.ByExtension(fc.Src)
 	if err != nil {
-		return "", fmt.Errorf("Could not uncompress %s: %v", src, err)
+		return "", err
 	}
 
-	return dst, nil
+	dc, ok := cIface.(archiver.Decompressor)
+	if !ok {
+		return "", fmt.Errorf("format specified by source filename is not a recognized compression algorithm: %s", fc.Src)
+	}
+	comp := archiver.FileCompressor{Decompressor: dc, OverwriteExisting: fc.OverwriteExisting}
+	err = comp.DecompressFile(fc.Src, fc.Dst)
+	if err != nil {
+		return "", fmt.Errorf("Could not uncompress %s: %v", fc.Src, err)
+	}
+
+	if _, err := os.Stat(fc.Dst); os.IsNotExist(err) {
+		return "", fmt.Errorf("Could not uncompress %s: destination file does not exist", fc.Src)
+	}
+
+	if fc.DeleteSource {
+		os.Remove(fc.Src)
+	}
+
+	return fc.Dst, nil
 }
 
 // Uncompress .Z files made with "compress" tool.
-// This cone be done with "gzip".
-// The original file will be deleted
-func uncompressZ(src string) (string, error) {
+// This can be done with "gzip".
+func (fc *FileCompressor) uncompressZ() (string, error) {
 	tool, err := exec.LookPath("gzip")
 	if err != nil {
 		return "", err
 	}
 
-	ext := filepath.Ext(src)
-	dst := strings.TrimSuffix(src, ext)
-
-	cmd := exec.Command(tool, "-df", src)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	err = cmd.Run()
+	options := "-dc"
+	cmd := exec.Command(tool, options, fc.Src)
+	err = RunCmdWithOutput(cmd, fc.Dst)
 	if err != nil {
-		return "", fmt.Errorf("cmd %s failed: %v: %s", tool, err, stderr.Bytes())
+		return "", err
 	}
 
-	if _, err := os.Stat(dst); os.IsNotExist(err) {
-		return "", fmt.Errorf("%s failed: destination file %s does not exist: %v", tool, dst, err)
+	if _, err := os.Stat(fc.Dst); os.IsNotExist(err) {
+		return "", fmt.Errorf("%s failed: destination file %s does not exist: %v", tool, fc.Dst, err)
 	}
 
-	return dst, nil
+	if fc.DeleteSource {
+		os.Remove(fc.Src)
+	}
+
+	return fc.Dst, nil
 }
 
-// GzipDecompressor is an implementation of Decompressor that can
-// decompress gzip files.
+// GzipDecompressor is an implementation of Decompressor that can decompress gzip files.
 // From https://github.com/hashicorp/go-getter/blob/master/decompress_gzip.go
 func gunzipAlternativ(src string) (string, error) {
 	// Directory isn't supported at all

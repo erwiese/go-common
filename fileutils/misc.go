@@ -1,11 +1,14 @@
 package fileutils
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -101,6 +104,41 @@ func RemoveAllContent(dir string) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+// RunCmdWithOutput runs the specified command and writes its output to the given file.
+func RunCmdWithOutput(cmd *exec.Cmd, outfile string) error {
+	f, err := os.Create(outfile)
+	if err != nil {
+		return fmt.Errorf("Could not create file %s: %v", outfile, err)
+	}
+	defer f.Close()
+	writer := bufio.NewWriter(f)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("RunCmd error: %v", err)
+	}
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err = cmd.Start() // as new OS process
+	if err != nil {
+		return fmt.Errorf("starting cmd failed: %v", err)
+	}
+
+	go io.Copy(writer, stdout)
+
+	//see https://stackoverflow.com/questions/10385551/get-exit-code-go
+	if err := cmd.Wait(); err != nil { // no timeout, see context
+		return fmt.Errorf("cmd failed: %v: %s", err, stderr.Bytes())
+	}
+	writer.Flush()
+
+	fmt.Printf("file %s created\n", outfile)
 
 	return nil
 }
