@@ -48,3 +48,214 @@ func XYZ2ell(x, y, z float64) (lat float64, lon float64, h float64) {
 	lon *= rho
 	return
 }
+
+/* # ========================================================================
+# ellXyz
+# ========================================================================
+#
+# ellXyz(n,e,u,[typ])
+#
+# ------------------------------------------------------------------------
+# Arguments  Description                                           Default
+# ------------------------------------------------------------------------
+# n          Geographic North coordinate
+# e          Geographic East  coordinate
+# u          Geographic Up    coordinate
+# typ        Radians ('r') or degree ('d')                         d
+# ------------------------------------------------------------------------
+#
+# Purpose:   Convert geographic coordinates to cartesian coordinates
+#
+# Comment:   ---
+#
+# Changes:   23-05-2010 Created
+#
+# ========================================================================
+sub ellXyz {
+   my ($n,$e,$u,$typ) = @_;
+   $typ = "d" unless $typ;
+   $typ = lc(substr($typ,0,1));
+
+# Conversion to radians
+   ($n,$e) = map { $_/$rho } ($n,$e) if $typ eq 'd';
+
+# Compute x,y,z
+   my $sp = sin($n);
+   my $cp = cos($n);
+   my $N = $ae/sqrt(1-$ef*$sp*$sp);
+   my $x = ($N+$u)*$cp*cos($e);
+   my $y = ($N+$u)*$cp*sin($e);
+   my $z = ($N-$N*$ef+$u)*$sp;
+
+# Return
+  return ($x,$y,$z);
+}
+
+
+# ========================================================================
+# xyzRot
+# ========================================================================
+#
+# xyzRot(x,y,z,ax,a,typ)
+#
+# ------------------------------------------------------------------------
+# Arguments  Description                                           Default
+# ------------------------------------------------------------------------
+# x          Geocentric cartesian X coordinate
+# Y          Geocentric cartesian Y coordinate
+# Z          Geocentric cartesian Z coordinate
+# ax         Rotation axis (x, y, z)
+# a          Rotation angle
+# typ        Radians ('r') or degree ('d')                         d
+# ------------------------------------------------------------------------
+#
+# Purpose:   Rotate geocentric coordinates
+#
+# Comment:   ---
+#
+# Changes:   23-05-2010 Created
+#
+# ========================================================================
+sub xyzRot {
+   my @old = splice(@_,0,3);
+   my ($ax,$a,$typ) = @_;
+   $typ = "d" unless $typ;
+   $typ = lc(substr($typ,0,1));
+
+# Conversion to radians
+   $a = $a/$rho if $typ eq 'd';
+
+# Buffer sine/cosine
+   my $sa = sin($a);
+   my $ca = cos($a);
+
+# Rotation matrix
+   my @R = ();
+   if      (lc($ax) eq "x") {
+      @R = ( [1, 0,   0  ],
+             [0, $ca,-$sa],
+             [0, $sa, $ca] );
+   } elsif (lc($ax) eq "y") {
+      @R = ( [ $ca, 0, $sa ],
+             [  0,  1,  0  ],
+             [-$sa, 0, $ca ] );
+   } elsif (lc($ax) eq "z") {
+      @R = ( [$ca,-$sa, 0 ],
+             [$sa, $ca, 0 ],
+             [ 0,   0,  1 ] );
+   }
+
+# Rotate point
+   my @new = undef;
+   for (my $r=0;$r<=2;$r++) {
+      for (my $c=0;$c<=2;$c++) {
+         $new[$r] += $R[$r][$c]*$old[$c];
+      }
+   }
+
+# Return
+   return (@new);
+}
+
+
+# ========================================================================
+# eccEll
+# ========================================================================
+#
+# (dn,de,du) = eccEll(n,e,u,dx,dy,dz)
+#
+# ------------------------------------------------------------------------
+# Arguments  Description                                           Default
+# ------------------------------------------------------------------------
+# n          Geographic North coordinate (rad)
+# e          Geographic East  coordinate (rad)
+# u          Geographic Up    coordinate (m)
+# dx         Eccentricity in X (m)
+# dy         Eccentricity in Y (m)
+# dz         Eccentricity in Z (m)
+# ------------------------------------------------------------------------
+#
+# Purpose:   Convert cartesian eccentricities (dx, dy, dz) to local
+#             geographic eccentricities (in m)
+#
+# Comment:   ---
+#
+# Changes:   23-05-2010 Created
+#
+# ========================================================================
+sub eccEll {
+   my ($n,$e,$u, @ecc) = @_;
+
+# Buffer sine/cosine
+   my $sn = sin($n);
+   my $cn = cos($n);
+   my $se = sin($e);
+   my $ce = cos($e);
+
+# Rotation matrix
+   my @R = ();
+   $R[0][0] = -$sn*$ce;
+   $R[0][1] = -$sn*$se;
+   $R[0][2] =  $cn    ;
+   $R[1][0] = -$se    ;
+   $R[1][1] =  $ce    ;
+   $R[1][2] =  0      ;
+   $R[2][0] =  $cn*$ce;
+   $R[2][1] =  $cn*$se;
+   $R[2][2] =  $sn    ;
+
+# Compute eccentricities
+   my @neu = (0,0,0);
+   for (my $ii=0; $ii<=2; $ii++) {
+      for (my $jj=0; $jj<=2; $jj++) {
+         $neu[$ii] += $R[$ii][$jj]*$ecc[$jj];
+      }
+   }
+
+# Return
+   return(@neu);
+}
+
+
+# ========================================================================
+# degGms
+# ========================================================================
+#
+# degGms(a,typ)
+#
+# ------------------------------------------------------------------------
+# Arguments  Description                                           Default
+# ------------------------------------------------------------------------
+# a          Angle
+# typ        Radians ('r') or degree ('d')                         d
+# ------------------------------------------------------------------------
+#
+# Purpose:   Convert angle to deg/min/sec format
+#
+# Comment:   ---
+#
+# Changes:   23-10-2010 Created
+#
+# ========================================================================
+sub degGms {
+   my ($a,$typ) = @_;
+   $typ = "d" unless $typ;
+   $typ = lc(substr($typ,0,1));
+
+# Conversion to degree
+   $a = $a*$rho if $typ eq 'r';
+
+# Convert to deg/min/sec format
+   my $d = int($a);
+   my $m = int(($a-$d)*60);
+   my $s = ($a-$d-$m/60)*3600;
+   $m = -$m if ($m<0);
+   $s = -$s if ($s<0);
+
+# Return
+   return ($d,$m,$s);
+}
+
+# How to convert degrees,minutes,seconds to decimal degrees
+# http://www.rapidtables.com/convert/number/degrees-minutes-seconds-to-degrees.htm
+# dd = d + m/60 + s/3600 */
