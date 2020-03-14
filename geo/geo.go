@@ -16,7 +16,7 @@ var (
 )
 
 // XYZ2ell converts cartesian coordinates to geographic coordinates in degree.
-func XYZ2ell(x, y, z float64) (lat float64, lon float64, height float64) {
+func XYZ2ell(x, y, z float64) (lat, lon, height float64) {
 	// Special locations (geocenter, pole)
 	if x == 0 && y == 0 && z == 0 {
 		return 0, 0, 0
