@@ -6,6 +6,7 @@ import (
 )
 
 func init() {
+	// TODO use t.TempDir()
 	_ = os.Mkdir("testdata/tmp/", 0700) // os.ModePerm (0777)
 	RemoveAllContent("testdata/tmp/")
 }
@@ -15,7 +16,6 @@ func TestArchiveFiles(t *testing.T) {
 		files   []string
 		zipfile string
 	}
-
 	tests := []struct {
 		name    string
 		args    args

@@ -1,4 +1,4 @@
-package fileutils
+package fileutils // github.com/erwiese/go-common/fileutils
 
 import (
 	"archive/zip"
@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 )
 
 // see https://github.com/klauspost/compress/tree/master/zstd#zstd
@@ -20,7 +20,10 @@ import (
 // we make our own FileCompressor.
 type FileCompressor struct {
 	Src string // Source file, required.
-	Dst string // Destination file
+
+	// Destination Dst can be empty, an existing directory or the explicit destination filename.
+	// If it is empty or a directory, the destination filename will be built automatically.
+	Dst string
 
 	// Whether to overwrite existing files when creating files.
 	OverwriteExisting bool
@@ -237,3 +240,52 @@ func unzipAlternativ(src string) (string, error) {
 func ArchiveFiles(sources []string, dest string) error {
 	return archiver.Archive(sources, dest)
 }
+
+// CompressGzip compresses a file using gzip format and returns the compressed filename.
+// Existing files will be overwritten.
+// use: archiver.CompressFile(path, path+".gz") directly
+/* func CompressGzip(path string) (string, error) {
+	pathgz := path + ".gz"
+
+	// try with gzip first, if installed
+	if gzip, err := exec.LookPath("gzip"); err == nil {
+		cmd := exec.Command(gzip, "-f", path) // -n
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		if err != nil {
+			return "", fmt.Errorf("gzip failed: %v: %s", err, stderr.Bytes())
+		}
+		if _, err := os.Stat(pathgz); os.IsNotExist(err) {
+			return "", fmt.Errorf("gzip failed: %s: %s", "comressed file does not exist", pathgz)
+		}
+		return pathgz, nil
+	}
+
+	r, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+
+	// writer
+	out, err := os.Create(pathgz)
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	zw := gzip.NewWriter(out)
+	_, err = io.Copy(zw, r)
+	if err := zw.Close(); err != nil {
+		return "", err
+	}
+
+	// check filesize > 0
+	if finfo, err := os.Stat(pathgz); !os.IsNotExist(err) {
+		if finfo.Size() < 1 {
+			return "", fmt.Errorf("compressed file is empty: %s", pathgz)
+		}
+	}
+	return pathgz, nil
+} */
