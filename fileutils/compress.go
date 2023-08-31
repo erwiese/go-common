@@ -102,11 +102,11 @@ func (fc *FileCompressor) decompressFil() (string, error) {
 	comp := archiver.FileCompressor{Decompressor: dc, OverwriteExisting: fc.OverwriteExisting}
 	err = comp.DecompressFile(fc.Src, fc.Dst)
 	if err != nil {
-		return "", fmt.Errorf("Could not uncompress %s: %v", fc.Src, err)
+		return "", fmt.Errorf("decompress %s: %v", fc.Src, err)
 	}
 
 	if _, err := os.Stat(fc.Dst); os.IsNotExist(err) {
-		return "", fmt.Errorf("Could not uncompress %s: destination file does not exist", fc.Src)
+		return "", fmt.Errorf("decompress %s: destination file does not exist", fc.Src)
 	}
 
 	if fc.DeleteSource {
