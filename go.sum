@@ -1,4 +1,6 @@
 github.com/StefanSchroeder/Golang-Ellipsoid v0.0.0-20221004092235-f00a9ab04789 h1:OdMTHerQvXtl8a/teKjpaN9lY5xZJ92EG5Qr/nhBfKY=
 github.com/StefanSchroeder/Golang-Ellipsoid v0.0.0-20221004092235-f00a9ab04789/go.mod h1:6/CMhlAhQVieQT0vgVvr6VfWJj21dQV7Ns6yOLuLnF8=
+github.com/StefanSchroeder/Golang-Ellipsoid v0.0.0-20241222205244-01047a497824 h1:JfY52GBggEaf7CcYWeiZRxjspTOAwpZq1Zaw87SCiwU=
+github.com/StefanSchroeder/Golang-Ellipsoid v0.0.0-20241222205244-01047a497824/go.mod h1:6/CMhlAhQVieQT0vgVvr6VfWJj21dQV7Ns6yOLuLnF8=
 github.com/mmcloughlin/geohash v0.10.0 h1:9w1HchfDfdeLc+jFEf/04D27KP7E2QmpDu52wPbJWRE=
 github.com/mmcloughlin/geohash v0.10.0/go.mod h1:oNZxQo5yWJh0eMQEP/8hwQuVx9Z9tjwFUqcTB1SmG0c=
